@@ -94,23 +94,27 @@ def identify_face(img, bounds):
         print(str.format("Similarity: {:.0f}%", similarity))
         return external_id
 
+def detect_faces(img):
+    (height, width, channels) = img.shape
+    bites = get_region_bytes(img, {"Left": 0, "Top": 0, "Width": width, "Height": height})
+    res = client.detect_faces(Image={"Bytes": bites}, Attributes=['ALL'])
+    return res['FaceDetails']
+    
 def main():
     pic_file = sys.argv[1]
     print("processing: " + pic_file)
-    with open(pic_file, 'rb') as test:        
-        res = client.detect_faces(Image={"Bytes": test.read()}, Attributes=['ALL'])
-        face_list = res['FaceDetails']
-        img = cv2.imread(pic_file)
-        for num, face in enumerate(face_list):
-            bounds = face['BoundingBox']
-            print("analyzing: " + "face " + str(num))
-            face_name = identify_face(img, bounds)
-            label_face(img, bounds, face_name)            
-            describe_face(img, bounds, face)
-        scale = get_display_scale(img)
-        scaled = cv2.resize(img, None, fx=scale, fy=scale)
-        cv2.imshow('Result', scaled)
-        cv2.waitKey(0)
+    img = cv2.imread(pic_file)
+    face_list = detect_faces(img)
+    for num, face in enumerate(face_list):
+        bounds = face['BoundingBox']
+        print("analyzing: " + "face " + str(num))
+        face_name = identify_face(img, bounds)
+        label_face(img, bounds, face_name)            
+        describe_face(img, bounds, face)
+    scale = get_display_scale(img)
+    scaled = cv2.resize(img, None, fx=scale, fy=scale)
+    cv2.imshow('Result', scaled)
+    cv2.waitKey(0)
 
 if __name__ == "__main__":
    main()
