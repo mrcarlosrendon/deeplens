@@ -1,26 +1,37 @@
 import math
-import boto3
 import sys
-from PIL import Image
+import boto3
+import cv2
+import numpy
 
+OVERLAY_COLOR = (255, 165, 20)
 COLLECTION_ID = "carlos_test"
 MATCH_THRESHOLD = 70.0
 client = boto3.client('rekognition', region_name='us-east-1')
 
-def crop_n_save(fn, out_fn, bounds):
-    im = Image.open(fn)
-    #print(im.size)
+def get_scaled_bounds(img, bounds):
+    (height, width, channels) = img.shape
     #print(bounds)
-    (width, height) = im.size
-    left = bounds['Left']*width
-    top = bounds['Top']*height
-    box = (left, top, left + (bounds['Width']*width), top + (bounds['Height']*height))
-    #print(box)
-    im.crop(box).save(out_fn)
+    #print(width, height)
+    left = int(bounds['Left']*width)
+    top = int(bounds['Top']*height)
+    right = int(left + (bounds['Width']*width))
+    bottom = int(top + (bounds['Height']*height))
+    return (left, right, top, bottom)
 
-def value_if_confidence(value, confidence):
-    if value['Confidence'] > confidence:
-        return value['Value']
+def get_region_bytes(img, bounds):
+    (left, right, top, bottom) = get_scaled_bounds(img, bounds)
+    img_enc = cv2.imencode(".jpg", img[top:bottom, left:right])
+    return numpy.array(img_enc[1]).tostring()
+
+def label_face(img, bounds, name):
+    scaled_bounds = get_scaled_bounds(img, bounds)
+    #print(scaled_bounds)
+    (left, right, top, bottom) = scaled_bounds
+    cv2.rectangle(img, (left, top), (right, bottom), OVERLAY_COLOR, 1)
+    cv2.putText(img, name, (left, top-15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, OVERLAY_COLOR, 1)
+
+    cv2.imwrite('face_0.jpg', img[top:bottom, left:right])
     
 def describe_face(face):
     age = face['AgeRange']
@@ -33,32 +44,37 @@ def describe_face(face):
     print("Face Info")
     print("Age: " + age_str  + " years old")
     print("Emotions: " + str(emotions_lst))
+    def value_if_confidence(value, confidence):
+        if value['Confidence'] > confidence:
+            return value['Value']
     items = ['Gender', 'EyesOpen', 'MouthOpen', 'Smile', 'Eyeglasses', 'Sunglasses', 'Beard', 'Mustache']
     for item in items:
         print(item + ": " + str(value_if_confidence(face[item], 90.0)))
     print("")
     
-def identify_face(fn):
-    with open(fn, 'rb') as face:
-        res = client.search_faces_by_image(CollectionId=COLLECTION_ID, Image={"Bytes": face.read()}, MaxFaces=5, FaceMatchThreshold=MATCH_THRESHOLD)
-    
-        if res['SearchedFaceConfidence'] < 90:
-            print("Warning! Not sure there is even a face")
-
-        location = res['SearchedFaceBoundingBox']
-        face_matches = res['FaceMatches']
-        if len(face_matches) < 1:
-            print("No matches found")
+def identify_face(img, bounds):
+    try:
+        res = client.search_faces_by_image(CollectionId=COLLECTION_ID, Image={"Bytes": get_region_bytes(img, bounds)}, MaxFaces=5, FaceMatchThreshold=MATCH_THRESHOLD)
+    except:
+        return "Unidentified"
         
-        for match in face_matches:
-            similarity = match['Similarity']
-            amazon_id = match['Face']['ImageId']
-            external_id = match['Face']['ExternalImageId']
+    if res['SearchedFaceConfidence'] < 90:
+        print("Warning! Not sure there is even a face")
 
-            print("External Id: " + external_id)
-            print("Amazon Id: " + amazon_id)
-            print(str.format("Similarity: {:.0f}%", similarity))
-            break
+    location = res['SearchedFaceBoundingBox']
+    face_matches = res['FaceMatches']
+    if len(face_matches) < 1:
+        print("No matches found")
+        
+    for match in face_matches:
+        similarity = match['Similarity']
+        amazon_id = match['Face']['ImageId']
+        external_id = match['Face']['ExternalImageId']
+        
+        print("External Id: " + external_id)
+        print("Amazon Id: " + amazon_id)
+        print(str.format("Similarity: {:.0f}%", similarity))
+        return external_id
 
 def main():
     pic_file = sys.argv[1]
@@ -66,14 +82,16 @@ def main():
     with open(pic_file, 'rb') as test:        
         res = client.detect_faces(Image={"Bytes": test.read()}, Attributes=['ALL'])
         face_list = res['FaceDetails']
+        img = cv2.imread(pic_file)
         for num, face in enumerate(face_list):
             bounds = face['BoundingBox']
             face_file = "face_" + str(num) + ".jpg"
             print("processing: " + face_file)
-            crop_n_save(pic_file, face_file, bounds)
-            identify_face(face_file)
+            face_name = identify_face(img, bounds)
+            label_face(img, bounds, face_name)            
             describe_face(face)
-
+        cv2.imshow('test', img)
+        cv2.waitKey(0)
 main()
     
 
