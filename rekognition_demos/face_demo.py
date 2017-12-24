@@ -1,6 +1,8 @@
 import boto3
+from PIL import Image
 
 client = boto3.client('rekognition', region_name='us-east-1')
+s3 = boto3.client('s3', region_name='us-east-1')
 
 photo_path = raw_input("Photo Path in S3\n")
 
