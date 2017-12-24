@@ -89,9 +89,9 @@ def identify_face(img, bounds):
         amazon_id = match['Face']['ImageId']
         external_id = match['Face']['ExternalImageId']
         
-        print("External Id: " + external_id)
-        print("Amazon Id: " + amazon_id)
-        print(str.format("Similarity: {:.0f}%", similarity))
+        #print("External Id: " + external_id)
+        #print("Amazon Id: " + amazon_id)
+        #print(str.format("Similarity: {:.0f}%", similarity))
         return external_id
 
 def detect_faces(img):
