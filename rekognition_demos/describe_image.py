@@ -27,6 +27,14 @@ def get_display_scale(img):
         return 1.0/scale
     return 1
 
+def get_display_props(img):
+    width = 1
+    font_size = .5
+    if get_display_scale(img) < .6:
+        width = 4
+        font_size = 2
+    return (width, font_size)
+
 def get_region_bytes(img, bounds):
     (left, right, top, bottom) = get_scaled_bounds(img, bounds)
     img_enc = cv2.imencode(".jpg", img[top:bottom, left:right])
@@ -36,15 +44,11 @@ def label_face(img, bounds, name):
     scaled_bounds = get_scaled_bounds(img, bounds)
     #print(scaled_bounds)
     (left, right, top, bottom) = scaled_bounds
-    width = 1
-    font_size = .5
-    if get_display_scale(img) < .6:
-        width = 4
-        font_size = 2
+    (width, font_size) = get_display_props(img)
     cv2.rectangle(img, (left, top), (right, bottom), OVERLAY_COLOR, width)
     cv2.putText(img, name, (left, top-15), cv2.FONT_HERSHEY_SIMPLEX, font_size, OVERLAY_COLOR, width)
     
-def describe_face(face):
+def describe_face(img, bounds, face):
     age = face['AgeRange']
     age_str = str(age['Low']) + "-" + str(age['High'])
     emotions = face['Emotions']
@@ -52,16 +56,19 @@ def describe_face(face):
     for emotion in emotions:
         if emotion['Confidence'] > 90:
             emotions_lst.append(emotion['Type'])
-    print("Face Info")
-    print("Age: " + age_str  + " years old")
-    print("Emotions: " + str(emotions_lst))
+
+    (width, font_size) = get_display_props(img)
+    (left, right, top, bottom) = get_scaled_bounds(img, bounds)
+
+    cv2.putText(img, "Age: " + age_str, (left, bottom + int(30*font_size)), cv2.FONT_HERSHEY_SIMPLEX, font_size, OVERLAY_COLOR, width)
+    cv2.putText(img, "Emotions: " + str(emotions_lst), (left, bottom + int(2*30*font_size)), cv2.FONT_HERSHEY_SIMPLEX, font_size, OVERLAY_COLOR, width)
+    
     def value_if_confidence(value, confidence):
         if value['Confidence'] > confidence:
             return value['Value']
     items = ['Gender', 'EyesOpen', 'MouthOpen', 'Smile', 'Eyeglasses', 'Sunglasses', 'Beard', 'Mustache']
-    for item in items:
-        print(item + ": " + str(value_if_confidence(face[item], 90.0)))
-    print("")
+    for (num, item) in enumerate(items):
+        cv2.putText(img, item + ": " + str(value_if_confidence(face[item], 90.0)), (left, bottom + int((num+3)*30*font_size)), cv2.FONT_HERSHEY_SIMPLEX, font_size, OVERLAY_COLOR, width)
     
 def identify_face(img, bounds):
     try:
@@ -99,7 +106,7 @@ def main():
             print("analyzing: " + "face " + str(num))
             face_name = identify_face(img, bounds)
             label_face(img, bounds, face_name)            
-            describe_face(face)
+            describe_face(img, bounds, face)
         scale = get_display_scale(img)
         scaled = cv2.resize(img, None, fx=scale, fy=scale)
         cv2.imshow('Result', scaled)
