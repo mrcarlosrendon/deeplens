@@ -103,3 +103,4 @@ ENV/
 
 # mypy
 .mypy_cache/
+label_faces/build.zip

@@ -111,6 +111,7 @@ def main():
         scaled = cv2.resize(img, None, fx=scale, fy=scale)
         cv2.imshow('Result', scaled)
         cv2.waitKey(0)
-main()
-    
+
+if __name__ == "__main__":
+   main()
 

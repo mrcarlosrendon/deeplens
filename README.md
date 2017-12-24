@@ -1,6 +1,11 @@
 # deeplens
 Code for DeepLens Challenge
 
+
+
+## Make a note about needing to setup IAM role correctly. Such as rekognition read only access
+
+
 ## Inspiration
 
 Getting my badge scanned awkwardly at re:Invent conference. Didn't we just get magical cameras that solve all problems?
