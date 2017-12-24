@@ -19,6 +19,14 @@ def get_scaled_bounds(img, bounds):
     bottom = int(top + (bounds['Height']*height))
     return (left, right, top, bottom)
 
+def get_display_scale(img):
+    (height, width, channels) = img.shape
+    scale = 1
+    if width > 1980 or height > 1080:
+        scale = int(max(width / 1980, height/ 1080))+1
+        return 1.0/scale
+    return 1
+
 def get_region_bytes(img, bounds):
     (left, right, top, bottom) = get_scaled_bounds(img, bounds)
     img_enc = cv2.imencode(".jpg", img[top:bottom, left:right])
@@ -28,10 +36,13 @@ def label_face(img, bounds, name):
     scaled_bounds = get_scaled_bounds(img, bounds)
     #print(scaled_bounds)
     (left, right, top, bottom) = scaled_bounds
-    cv2.rectangle(img, (left, top), (right, bottom), OVERLAY_COLOR, 1)
-    cv2.putText(img, name, (left, top-15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, OVERLAY_COLOR, 1)
-
-    cv2.imwrite('face_0.jpg', img[top:bottom, left:right])
+    width = 1
+    font_size = .5
+    if get_display_scale(img) < .6:
+        width = 4
+        font_size = 2
+    cv2.rectangle(img, (left, top), (right, bottom), OVERLAY_COLOR, width)
+    cv2.putText(img, name, (left, top-15), cv2.FONT_HERSHEY_SIMPLEX, font_size, OVERLAY_COLOR, width)
     
 def describe_face(face):
     age = face['AgeRange']
@@ -64,7 +75,7 @@ def identify_face(img, bounds):
     location = res['SearchedFaceBoundingBox']
     face_matches = res['FaceMatches']
     if len(face_matches) < 1:
-        print("No matches found")
+        return "Unidentified"
         
     for match in face_matches:
         similarity = match['Similarity']
@@ -85,12 +96,13 @@ def main():
         img = cv2.imread(pic_file)
         for num, face in enumerate(face_list):
             bounds = face['BoundingBox']
-            face_file = "face_" + str(num) + ".jpg"
-            print("processing: " + face_file)
+            print("analyzing: " + "face " + str(num))
             face_name = identify_face(img, bounds)
             label_face(img, bounds, face_name)            
             describe_face(face)
-        cv2.imshow('test', img)
+        scale = get_display_scale(img)
+        scaled = cv2.resize(img, None, fx=scale, fy=scale)
+        cv2.imshow('Result', scaled)
         cv2.waitKey(0)
 main()
     
