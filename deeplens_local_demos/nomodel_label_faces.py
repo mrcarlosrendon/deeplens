@@ -8,11 +8,11 @@ while True:
     start = timer()
     for x in range(0, 10):        
         awscam.getLastFrame()
-    get_frames = timer()
-    print("Get Frames Time: " + str(get_frames - start))
     ret = False    
     while not ret:
         ret, img = awscam.getLastFrame()
+    get_frames = timer()
+    print("Get Frames Time: " + str(get_frames - start))
     # Scale for SPEED
     scale = 1.0/2
     scaled = cv2.resize(img, None, fx=scale, fy=scale)
@@ -23,7 +23,7 @@ while True:
     print("Detect Faces Time: " + str(detect_faces - scale_down))
     print("Num Faces: " + str(len(face_list)))
     for num, face in enumerate(face_list):
-        bounds = face['BoundingBox']
+        bounds = describe_image.aws_bounds_to_cv_bounds(scaled, face['BoundingBox'])
         print("analyzing: face " + str(num))
         face_name = describe_image.identify_face(scaled, bounds)
         identify_face = timer()
