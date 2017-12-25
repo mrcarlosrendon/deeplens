@@ -103,6 +103,9 @@ def main():
     face_list = detect_faces(img)
     for num, face in enumerate(face_list):
         bounds = aws_bounds_to_cv_bounds(img, face['BoundingBox'])
+        face_file = "face_" + str(num) + ".jpg"
+        (left, right, top, bottom) = bounds
+        cv2.imwrite(face_file, img[top:bottom, left:right])
         print("analyzing: " + "face " + str(num))
         face_name = identify_face(img, bounds)
         label_face(img, bounds, face_name)            
