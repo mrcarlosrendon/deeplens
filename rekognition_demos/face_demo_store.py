@@ -3,7 +3,7 @@ import boto3
 
 COLLECTION_ID = "carlos_test"
 
-client = boto3.client('rekognition', region_name='us-east-1')
+client = boto3.client('rekognition', region_name='us-west-2')
 
 if (not len(sys.argv) == 3):
     print("Usage face_demo_store.py [image file] [face name]")

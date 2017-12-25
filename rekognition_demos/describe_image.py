@@ -7,7 +7,7 @@ import numpy
 OVERLAY_COLOR = (255, 165, 20)
 COLLECTION_ID = "carlos_test"
 MATCH_THRESHOLD = 70.0
-client = boto3.client('rekognition', region_name='us-east-1')
+client = boto3.client('rekognition', region_name='us-west-2')
 
 def aws_bounds_to_cv_bounds(img, bounds):
     (height, width, channels) = img.shape
