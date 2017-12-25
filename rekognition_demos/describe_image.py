@@ -9,10 +9,8 @@ COLLECTION_ID = "carlos_test"
 MATCH_THRESHOLD = 70.0
 client = boto3.client('rekognition', region_name='us-east-1')
 
-def get_scaled_bounds(img, bounds):
+def aws_bounds_to_cv_bounds(img, bounds):
     (height, width, channels) = img.shape
-    #print(bounds)
-    #print(width, height)
     left = int(bounds['Left']*width)
     top = int(bounds['Top']*height)
     right = int(left + (bounds['Width']*width))
@@ -36,14 +34,12 @@ def get_display_props(img):
     return (width, font_size)
 
 def get_region_bytes(img, bounds):
-    (left, right, top, bottom) = get_scaled_bounds(img, bounds)
+    (left, right, top, bottom) = bounds
     img_enc = cv2.imencode(".jpg", img[top:bottom, left:right])
     return numpy.array(img_enc[1]).tostring()
 
 def label_face(img, bounds, name):
-    scaled_bounds = get_scaled_bounds(img, bounds)
-    #print(scaled_bounds)
-    (left, right, top, bottom) = scaled_bounds
+    (left, right, top, bottom) = bounds
     (width, font_size) = get_display_props(img)
     cv2.rectangle(img, (left, top), (right, bottom), OVERLAY_COLOR, width)
     cv2.putText(img, name, (left, top-15), cv2.FONT_HERSHEY_SIMPLEX, font_size, OVERLAY_COLOR, width)
@@ -58,7 +54,7 @@ def describe_face(img, bounds, face):
             emotions_lst.append(emotion['Type'])
 
     (width, font_size) = get_display_props(img)
-    (left, right, top, bottom) = get_scaled_bounds(img, bounds)
+    (left, right, top, bottom) = bounds
 
     cv2.putText(img, "Age: " + age_str, (left, bottom + int(30*font_size)), cv2.FONT_HERSHEY_SIMPLEX, font_size, OVERLAY_COLOR, width)
     cv2.putText(img, "Emotions: " + str(emotions_lst), (left, bottom + int(2*30*font_size)), cv2.FONT_HERSHEY_SIMPLEX, font_size, OVERLAY_COLOR, width)
@@ -96,7 +92,7 @@ def identify_face(img, bounds):
 
 def detect_faces(img):
     (height, width, channels) = img.shape
-    bites = get_region_bytes(img, {"Left": 0, "Top": 0, "Width": width, "Height": height})
+    bites = get_region_bytes(img, (0, width, 0, height))
     res = client.detect_faces(Image={"Bytes": bites}, Attributes=['ALL'])
     return res['FaceDetails']
     
@@ -106,7 +102,7 @@ def main():
     img = cv2.imread(pic_file)
     face_list = detect_faces(img)
     for num, face in enumerate(face_list):
-        bounds = face['BoundingBox']
+        bounds = aws_bounds_to_cv_bounds(img, face['BoundingBox'])
         print("analyzing: " + "face " + str(num))
         face_name = identify_face(img, bounds)
         label_face(img, bounds, face_name)            
