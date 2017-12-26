@@ -12,7 +12,7 @@ input_width = 300
 input_height = 300
 prob_thresh = 0.25
 
-scale = 1.0/2
+scale_amt = float(1.5)
 
 # Load model to GPU (use {"GPU": 0} for CPU)
 mcfg = {"GPU": 1}
@@ -22,8 +22,8 @@ if ret == False:
     raise Exception("Failed to get frame from the stream")
 ret, frame = awscam.getLastFrame()
             
-yscale = float((frame.shape[0]/2.)/input_height)
-xscale = float((frame.shape[1]/2.)/input_width)
+yscale = float((frame.shape[0]/scale_amt)/input_height)
+xscale = float((frame.shape[1]/scale_amt)/input_width)
 
 print("height: " + str(frame.shape[0]))
 print("width: " + str(frame.shape[1]))
@@ -40,7 +40,7 @@ while True:
     get_frames = timer()
     print("Get Frames Time: " + str(get_frames - start))
     # Scale for SPEED
-    scaled = cv2.resize(img, None, fx=scale, fy=scale)
+    scaled = cv2.resize(img, None, fx=1/scale_amt, fy=1/scale_amt)
     scale_down = timer()
     print("Scale Down Time: " + str(scale_down - get_frames))
     model_frame = cv2.resize(scaled, (input_width, input_height))
